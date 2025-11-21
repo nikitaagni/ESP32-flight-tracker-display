@@ -27,7 +27,7 @@ uint16_t myBLACK, myWHITE, myRED, myGREEN, myBLUE;
 
 // Wifi Info
 const char* ssid = SSID;
-const char* password = PASSWORD
+const char* password = PASSWORD;
 
 // maxRadius
 float maxRadiusKm = 100.0; // only search within 50km
