@@ -9,21 +9,15 @@
 #include "weather.h"
 #include <time.h>
 
-#define TIMEZONE "EST5EDT" // change to your timezone
-
-
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = -3600 * 5;
 const int   daylightOffset_sec = 3600;
-
 
 #define PANEL_RES_X 64      // Number of pixels wide of each INDIVIDUAL panel module. 
 #define PANEL_RES_Y 32     // Number of pixels tall of each INDIVIDUAL panel module.
 #define PANEL_CHAIN 1      // Total number of panels chained one to another
 
 MatrixPanel_I2S_DMA *dma_display = nullptr;
-
-uint16_t myBLACK, myWHITE, myRED, myGREEN, myBLUE;
 
 // Wifi Info
 const char* ssid = SSID;
@@ -67,7 +61,7 @@ void displayClock() {
     if (hour12 < 10) dma_display->setCursor(10, 15);;
     dma_display->print(hour12);
 
-    dma_display->setTextColor(minColor);
+//    dma_display->setTextColor(minColor);
     dma_display->print(":");
 
     // ==== MINUTES ====
@@ -121,9 +115,25 @@ void loop() {
       getWeather();
   }
 
-  // Always update the display for real-time clock changes
-//  updateDisplay();
- displayClock();
+  updateDisplay();
+// displayClock();
 //  getNearestFlightInfo();
+
+//    drawIcon(0, 0, sun24x24, dma_display->color565(255, 220, 0));
+//
+//    delay(6000); 
+//    dma_display->fillScreenRGB888(0, 0, 0);
+//
+//
+//    drawIcon(2, 2, cloud24x24, dma_display->color565(255,255,255));
+////    drawIcon(0, 0, cloud24x24, dma_display->color565(255, 220, 0));
+//    // Display each icon for 3 seconds
+//    delay(3000); 
+//    dma_display->fillScreenRGB888(0, 0, 0);
+//    drawIcon(2, 2, rain24x24, dma_display->color565(150,150,255));
+//    delay(3000); 
+//    dma_display->fillScreenRGB888(0, 0, 0);
+//drawIcon(2, 2, snow24x24, dma_display->color565(200,200,255));
+//delay(3000); 
 
 }

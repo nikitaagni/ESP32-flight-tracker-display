@@ -5,16 +5,118 @@ WeatherData weatherForecast;
 unsigned long lastWeatherUpdate = 0;
 const long WEATHER_UPDATE_INTERVAL = 30 * 60 * 1000; // Update weather every 30 minutes
 
-// --- ICON BITMAPS (12x12 pixels) ---
-const unsigned char PROGMEM sun_icon[] = {
-  0x00, 0x00, 0x18, 0x24, 0x42, 0x81, 0x81, 0x42, 0x24, 0x18, 0x00, 0x00,
-  0x00, 0x00, 0x18, 0x24, 0x42, 0x81, 0x81, 0x42, 0x24, 0x18, 0x00, 0x00
-};
 
-const unsigned char PROGMEM rain_icon[] = {
-  0x00, 0x00, 0x00, 0x3C, 0x7E, 0xFE, 0xFE, 0x7E, 0x3C, 0x42, 0x42, 0x84,
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
+// New Sun icon with central circle and 8 rays for better visual appeal
+// 24x24 SUN BITMAP (1 = pixel on)
+// const uint8_t sun24x24[24][3] PROGMEM = {
+//  { 0b11111111, 0b11100000, 0b00000000 },
+//  { 0b11111111, 0b11111000, 0b00000000 },
+//  { 0b11111111, 0b11111100, 0b00000000 },
+//  { 0b11111111, 0b11111110, 0b00000000 },
+//  { 0b11111111, 0b11111110, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111111, 0b00000000 },
+//  { 0b11111111, 0b11111110, 0b00000000 },
+//  { 0b11111111, 0b11111110, 0b00000000 },
+//  { 0b11111111, 0b11111100, 0b00000000 },
+//  { 0b01111111, 0b11111000, 0b00000000 },
+//  { 0b00011111, 0b11100000, 0b00000000 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 }
+//};
+//
+//const uint8_t cloud24x24[24][3] PROGMEM = {
+//  {0b00000000,0b01111000,0b00000000},
+//  {0b00000001,0b11111100,0b00000000},
+//  {0b00001111,0b11111110,0b00000000},
+//  {0b00001111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b11000000},
+//  {0b01111111,0b11111111,0b11100000},
+//  {0b01111111,0b11111111,0b11110000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b01111111,0b11111111,0b11110000},
+//  {0b00000000,0b00000000,0b00000000},
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 },
+//  { 0,0,0 }
+//};
+//
+//const uint8_t rain24x24[24][3] PROGMEM = {
+//    {0b00000000,0b01111000,0b00000000},
+//  {0b00000001,0b11111100,0b00000000},
+//  {0b00001111,0b11111110,0b00000000},
+//  {0b00001111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b11000000},
+//  {0b01111111,0b11111111,0b11100000},
+//  {0b01111111,0b11111111,0b11110000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b01111111,0b11111111,0b11110000},
+//
+//  {0b00110000,0b00110000,0b00110000}, // raindrops start
+//  {0b00010000,0b00100000,0b00100000},
+//  {0b00110000,0b00110000,0b00110000},
+//  {0b00000000,0b00000000,0b00000000},
+//  {0b00010000,0b00100000,0b00100000},
+//  {0b00110000,0b00110000,0b00110000},
+//  {0b00000000,0b00000000,0b00000000},
+//  {0b00010000,0b00100000,0b00100000},
+//  {0b00110000,0b00110000,0b00110000},
+//  {0b00000000,0b00000000,0b00000000},
+//  {0b00000000,0b00000000,0b00000000}
+//};
+//
+//const uint8_t snow24x24[24][3] PROGMEM = {
+//  {0b00000000,0b01111000,0b00000000},
+//  {0b00000001,0b11111100,0b00000000},
+//  {0b00001111,0b11111110,0b00000000},
+//  {0b00001111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b00000000},
+//  {0b00111111,0b11111111,0b11000000},
+//  {0b01111111,0b11111111,0b11100000},
+//  {0b01111111,0b11111111,0b11110000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b11111111,0b11111111,0b11111000},
+//  {0b01111111,0b11111111,0b11110000},
+//
+//  // snowflakes
+//  {0b00100000,0b00000000,0b00100000},
+//  {0b10101000,0b00000000,0b10101000},
+//  {0b01110000,0b00000000,0b01110000},
+//  {0b11111000,0b00000000,0b11111000},
+//  {0b01110000,0b00010000,0b01110000},
+//  {0b10101000,0b01010100,0b10101000},
+//  {0b00100000,0b00111000,0b00100000},
+//  {0b00000000,0b01111100,0b00000000},
+//  {0b00000000,0b00111000,0b00000000},
+//  {0b00000000,0b01010100,0b00000000},
+//  {0b00000000,0b00010000,0b00000000}
+//};
 
 
 /**
@@ -35,22 +137,22 @@ void drawIcon(int x, int y, uint16_t color, const unsigned char* icon, int width
  */
 void drawWeatherIcon(int x, int y, String condition) {
     uint16_t color = COLOR_WHITE;
-    const unsigned char* icon = sun_icon; // Default to sun
-
-    condition.toLowerCase();
-
-    if (condition.indexOf("rain") != -1 || condition.indexOf("drizzle") != -1) {
-        icon = rain_icon;
-        color = COLOR_BLUE;
-    } else if (condition.indexOf("cloud") != -1) {
-        icon = rain_icon; 
-        color = COLOR_CYAN;
-    } else { // Clear or Sun
-        icon = sun_icon;
-        color = COLOR_YELLOW;
-    }
-
-    drawIcon(x, y, color, icon, 12, 12); 
+//    const unsigned char* icon = sun_icon; // Default to sun
+//
+//    condition.toLowerCase();
+//
+//    if (condition.indexOf("rain") != -1 || condition.indexOf("drizzle") != -1) {
+//        icon = rain_icon;
+//        color = COLOR_BLUE;
+//    } else if (condition.indexOf("cloud") != -1) {
+//        icon = rain_icon; 
+//        color = COLOR_CYAN;
+//    } else { // Clear or Sun
+//        icon = sun_icon;
+//        color = COLOR_YELLOW;
+//    }
+//
+//    drawIcon(x, y, color, icon, 12, 12); 
 }
 
 /**
@@ -101,11 +203,6 @@ void getWeather() {
         time_t dt0 = doc["daily"][0]["dt"].as<time_t>();
         weatherForecast.day_abbr_day0 = getDayAbbr(dt0);
 
-        // --- Extract Day 1 (Tomorrow) Data ---
-        weatherForecast.temp_high_day1 = doc["daily"][1]["temp"]["max"].as<int>();
-        weatherForecast.temp_low_day1 = doc["daily"][1]["temp"]["min"].as<int>();
-        time_t dt1 = doc["daily"][1]["dt"].as<time_t>();
-        weatherForecast.day_abbr_day1 = getDayAbbr(dt1);
         
         Serial.println("Success!");
     } else {
@@ -141,36 +238,41 @@ void updateDisplay() {
     dma_display->setTextSize(1); 
     dma_display->setTextColor(COLOR_WHITE);
     // Positioned at the bottom left
-    dma_display->setCursor(5, PANEL_RES_Y - 9); 
-    dma_display->print(weatherForecast.day_abbr_day0); 
+    dma_display->setCursor(5, 23); 
+//    dma_display->print(weatherForecast.day_abbr_day0); 
+dma_display->print("SAT"); 
 
     // --- RIGHT HALF: TIME & DAY 1 FORECAST ---
 
-    // 1. Draw Day 1 Abbreviation (Top Right Corner - e.g., "SUN")
-    dma_display->setTextSize(1);
-    dma_display->setTextColor(COLOR_WHITE);
-    // Start X position to leave space for the temps
-    dma_display->setCursor(PANEL_RES_X - 25, 5); 
-    dma_display->print(weatherForecast.day_abbr_day1); 
+//    // 1. Draw Day 1 Abbreviation (Top Right Corner - e.g., "SUN")
+//    dma_display->setTextSize(1);
+//    dma_display->setTextColor(COLOR_WHITE);
+//    // Start X position to leave space for the temps
+//    dma_display->setCursor(PANEL_RES_X - 25, 5); 
+//    dma_display->print(weatherForecast.day_abbr_day0); 
     
     // 2. Draw the High/Low Temps for Day 1
     dma_display->setTextSize(1);
     dma_display->setTextColor(COLOR_WHITE);
     
     // --- ROW 1: High Temp (Right Side) ---
-    dma_display->setCursor(PANEL_RES_X - 24, 15); 
-    dma_display->printf("%d%c", weatherForecast.temp_high_day1, DEGREE_CHAR); 
+    dma_display->setCursor(35, 12); 
+    dma_display->printf("%d%c", 70, DEGREE_CHAR); 
+//    dma_display->printf("%d%c", weatherForecast.temp_high_day0, DEGREE_CHAR); 
     
     // --- ROW 2: Low Temp (Right Side) ---
-    dma_display->setCursor(PANEL_RES_X - 24, 25); 
-    dma_display->printf("%d%c", weatherForecast.temp_low_day1, DEGREE_CHAR); 
+    dma_display->setCursor(PANEL_RES_X - 24, 23); 
+    dma_display->printf("%d%c", 65, DEGREE_CHAR); 
+//    dma_display->printf("%d%c", weatherForecast.temp_low_day0, DEGREE_CHAR); 
 
     // 3. Draw the requested time format [8: \newline 50]
     dma_display->setTextSize(1); // Large font
-    dma_display->setTextColor(COLOR_GREEN);
+    dma_display->setTextColor(COLOR_BLUE);
+
+    dma_display->drawFastVLine(44, 2, 28, COLOR_WHITE);
 
     // X position centered around the 32-pixel mark
-    const int TIME_X_START = 34; 
+    const int TIME_X_START = 47; 
 
     // HOUR: e.g., "8:" (using 12-hour format)
     int hour_12 = timeinfo.tm_hour % 12;
@@ -186,42 +288,16 @@ void updateDisplay() {
     dma_display->flipDMABuffer();
 }
 
-
-/**
- * @brief Handles initialization of display, WiFi, and NTP.
- */
-void initializeSystem(const char* ssid, const char* password, long gmtOffset, int daylightOffset, const char* ntpServer) {
-    // 1. Initialize Display
-    dma_display->begin();
-    dma_display->setBrightness8(60);
-    dma_display->setTextWrap(false);
-    dma_display->fillScreen(COLOR_BLACK);
-    dma_display->flipDMABuffer();
-    
-    // 2. Connect to WiFi
-    dma_display->setCursor(0, 0);
-    dma_display->print("Connecting...");
-    dma_display->flipDMABuffer();
-
-    WiFi.begin(ssid, password);
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("\nWiFi connected.");
-        // 3. Initialize NTP Time
-        configTime(gmtOffset, daylightOffset, ntpServer);
-    } else {
-        Serial.println("\nWiFi connection failed.");
-        dma_display->fillScreen(COLOR_BLACK);
-        dma_display->setCursor(0, 0);
-        dma_display->setTextColor(dma_display->color565(255, 0, 0));
-        dma_display->print("WIFI ERR");
-        dma_display->flipDMABuffer();
-        while(1) delay(1000); // Stop here if no WiFi
+void drawIcon(int x, int y, const uint8_t icon[24][3], uint16_t color) {
+    for (int row = 0; row < 24; row++) {
+        for (int byteCol = 0; byteCol < 3; byteCol++) {
+            uint8_t b = pgm_read_byte(&(icon[row][byteCol])); // <--- read from PROGMEM
+            for (int bit = 7; bit >= 0; bit--) {
+                if (b & (1 << bit)) {
+                    int col = byteCol*8 + (7-bit);
+                    dma_display->drawPixel(x + col, y + row, color);
+                }
+            }
+        }
     }
 }
