@@ -9,6 +9,8 @@
 const char* opensky_url = "https://opensky-network.org/api/states/all";
 const char* aeroBase = "https://aeroapi.flightaware.com/aeroapi/flights/";
 const char* aeroAPIKey = AEROAPIKEY;
+extern const long FLIGHT_UPDATE_INTERVAL;
+extern unsigned long lastFlightUpdate;
 
 // Structure for a local flight object
 struct Flight {

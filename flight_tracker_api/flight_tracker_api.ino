@@ -1,13 +1,15 @@
 #include <WiFi.h>
+#include <time.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
-#include <Fonts/FreeSerifBold9pt7b.h>
+#include <Fonts/FreeSerif9pt7b.h>
 #include "airlines.h"
 #include "config.h"
 #include "weather.h"
-#include <time.h>
+#include "flight.h"
+
 
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = -3600 * 5;
@@ -17,6 +19,13 @@ const int   daylightOffset_sec = 3600;
 #define PANEL_RES_Y 32     // Number of pixels tall of each INDIVIDUAL panel module.
 #define PANEL_CHAIN 1      // Total number of panels chained one to another
 
+#define LIGHT_SENSOR_PIN 35
+#define BUTTON_PIN 33
+
+int currentMode = 0;
+unsigned long lastPress = 0;
+const unsigned long debounceMs = 200;
+
 MatrixPanel_I2S_DMA *dma_display = nullptr;
 
 // Wifi Info
@@ -25,24 +34,19 @@ const char* password = PASSWORD;
 
 // maxRadius
 float maxRadiusKm = 100.0; // only search within 50km
+int brightness = 80;
 
 void displayClock() {
-//    dma_display->fillScreenRGB888(0, 0, 0); // Clear screen
-    dma_display->setFont(&FreeSerifBold9pt7b);
+    dma_display->setFont(&FreeSerif9pt7b);
     // Get current time from ESP32
     struct tm timeinfo;
     if (!getLocalTime(&timeinfo)) {
         Serial.println("Failed to obtain time");
-        dma_display->setTextColor(dma_display->color565(255, 0, 0));
-        dma_display->setCursor(5, 10);
-        dma_display->print("No Time!");
-        dma_display->flipDMABuffer();
         return;
     }
 
     int hour = timeinfo.tm_hour;
     int minute = timeinfo.tm_min;
-    int second = timeinfo.tm_sec;
 
     int hour12 = hour % 12;        // Convert to 12-hour format
     if (hour12 == 0) hour12 = 12; // Handle midnight/noon
@@ -51,13 +55,13 @@ void displayClock() {
 
     // Colors
 //    uint16_t hourColor = dma_display->color565(255, 0, 150);   // orange
-    uint16_t minColor  = dma_display->color565(0, 200, 255);   // cyan
+    uint16_t timeColor  = dma_display->color565(0, 200, 255);   // cyan
 //    uint16_t secColor  = dma_display->color565(255, 0, 150);   // pink
 
     // ==== HOURS ====
     dma_display->setTextSize(1);
-    dma_display->setCursor(3, 15);
-    dma_display->setTextColor(minColor);
+    dma_display->setCursor(15, 25);
+    dma_display->setTextColor(timeColor);
     if (hour12 < 10) dma_display->setCursor(10, 15);;
     dma_display->print(hour12);
 
@@ -65,20 +69,37 @@ void displayClock() {
     dma_display->print(":");
 
     // ==== MINUTES ====
-//    dma_display->setTextColor(minColor);
+//    dma_display->setTextColor(timeColor);
     if (minute < 10) dma_display->print("0");
     dma_display->print(minute);
+    dma_display->setFont(NULL);
 
-    // Cute little animation: moving heart
-//    int heartX = (minute * PANEL_RES_X) / 60;
-//    int heartY = 28;
-//    dma_display->fillRect(heartX, heartY, 4, 4, dma_display->color565(255, 0, 0));
-//    dma_display->fillScreenRGB888(0, 0, 0);
     dma_display->flipDMABuffer();
 }
 
-void setup() {
+void handleButton() {
+  if (digitalRead(BUTTON_PIN) == LOW) {
+    unsigned long now = millis();
+    if (now - lastPress > debounceMs) {
+      currentMode = (currentMode + 1) % 2;
+      lastPress = now;
+      dma_display->clearScreen();
+      dma_display->setCursor(0, 0);
+      dma_display->setFont(&FreeSerif9pt7b);
+      dma_display->setTextSize(1);
+      dma_display->setTextColor(dma_display->color565(255, 255, 255));
+      dma_display->print("Getting new data");
+      dma_display->setFont(NULL);
+      Serial.println("Getting new data...");
 
+    }
+  }
+}
+
+void setup() {
+    analogSetAttenuation(ADC_11db);
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
+    
    HUB75_I2S_CFG mxconfig(
     PANEL_RES_X,   // module width
     PANEL_RES_Y,   // module height
@@ -92,7 +113,7 @@ void setup() {
   // Display Setup
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
   dma_display->begin();
-  dma_display->setBrightness8(60); //0-255
+  dma_display->setBrightness8(brightness); //0-255
   dma_display->clearScreen();
   
   Serial.begin(115200);
@@ -103,37 +124,35 @@ void setup() {
     Serial.print(".");
   }
   Serial.println("\nWiFi connected!");
+  
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  displayClock();
+  getWeather();
+  updateDisplay();
+  
 }
 
 void loop() {
-  delay(6000); // update once per minute
-  dma_display->fillScreenRGB888(0, 0, 0);
+  
+  int analogValue = analogRead(LIGHT_SENSOR_PIN);
+  brightness = map(analogValue, 0, 4095, 16, 255); // Avoid 0 brightness
+  dma_display->setBrightness(brightness);
 
-    // Check if it's time to update the weather data
-  if (millis() - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL) {
+  handleButton();
+
+  if (currentMode == 0) {
+     // Check if it's time to update the weather data
+    if (millis() - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL) {
       getWeather();
+    }
+    delay(3000); 
+    dma_display->clearScreen();
+    updateDisplay();
+  } else if (currentMode == 1) {
+    if (millis() - lastFlightUpdate > FLIGHT_UPDATE_INTERVAL) {
+      getNearestFlightInfo();
+    }
   }
 
-  updateDisplay();
 // displayClock();
-//  getNearestFlightInfo();
-
-//    drawIcon(0, 0, sun24x24, dma_display->color565(255, 220, 0));
-//
-//    delay(6000); 
-//    dma_display->fillScreenRGB888(0, 0, 0);
-//
-//
-//    drawIcon(2, 2, cloud24x24, dma_display->color565(255,255,255));
-////    drawIcon(0, 0, cloud24x24, dma_display->color565(255, 220, 0));
-//    // Display each icon for 3 seconds
-//    delay(3000); 
-//    dma_display->fillScreenRGB888(0, 0, 0);
-//    drawIcon(2, 2, rain24x24, dma_display->color565(150,150,255));
-//    delay(3000); 
-//    dma_display->fillScreenRGB888(0, 0, 0);
-//drawIcon(2, 2, snow24x24, dma_display->color565(200,200,255));
-//delay(3000); 
-
 }

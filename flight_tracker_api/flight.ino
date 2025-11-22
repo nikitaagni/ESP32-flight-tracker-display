@@ -3,9 +3,10 @@
 #include <algorithm>
 #include <cmath> // For isnan()
 
-/**
- * @brief Simple haversine distance (km) calculation between two points.
- */
+unsigned long lastFlightUpdate = 0;
+const long FLIGHT_UPDATE_INTERVAL = 60 * 1000; // every minute
+
+// haversine distance (km) calculation between two points.
 float haversine(float lat1, float lon1, float lat2, float lon2) {
     float R = 6371; // Earth radius in km
     float dLat = radians(lat2 - lat1);
@@ -17,9 +18,7 @@ float haversine(float lat1, float lon1, float lat2, float lon2) {
     return R * c;
 }
 
-/**
- * @brief Fetches detailed flight information from a secondary API (like FlightAware/AeroDataBox).
- */
+// Fetches detailed flight information from a secondary API (like FlightAware/AeroDataBox).
 bool fetchFlightAwareData(String callsign) {
     callsign.trim();
     if (callsign.length() < 3) {
@@ -66,13 +65,14 @@ bool fetchFlightAwareData(String callsign) {
         return false;
     }
     
-    // Extract required data fields
+    // Extract data fields
     String origin  = first["origin"]["code_iata"].as<String>();    // e.g. "ATL"
     String dest    = first["destination"]["code_iata"].as<String>(); // e.g. "LAX"
     String airline = first["operator_iata"].as<String>();            // e.g. "DL"
-    String flight  = first["flight_number"].as<String>();            // e.g. "640"
+    String flight  = first["ident_iata"].as<String>();            // e.g. "640"
     String aircraft = first["aircraft_type"].as<String>();          // e.g. "A321"
 
+    // test data
     //String origin = "ATL";
     //String dest = "SFO";
     //String flight = "F91949";
@@ -81,7 +81,7 @@ bool fetchFlightAwareData(String callsign) {
     Serial.println("Found valid flight!");
     Serial.printf("Route: %s -> %s\n", origin.c_str(), dest.c_str());
 
-    // Call the display function (must be implemented by the user)
+    // Call the display function
     displayFlightInfo(origin, dest, airline, flight, aircraft);
 
     return true;
@@ -107,6 +107,7 @@ void getNearestFlightInfo() {
 
     if (code != 200) {
         Serial.println("Failed to get OpenSky data");
+        getNearestFlightInfo();
         return;
     }
 
@@ -147,16 +148,17 @@ void getNearestFlightInfo() {
         }
     }
 
-    // 2. Sort by distance (nearest first)
+    // Sort by distance (nearest first)
     std::sort(flights.begin(), flights.end(), [](Flight a, Flight b) {
         return a.distance < b.distance;
     });
         
-    // 3. Try secondary API lookup for nearest flights until a valid one is found
+    // Secondary API lookup for nearest flights until a valid one is found
     for (auto &f : flights) {
         Serial.printf("Checking callsign: %s, Distance: %.1f km\n", f.callsign.c_str(), f.distance);
         if (fetchFlightAwareData(f.callsign) ) {
             // Found a valid flight with full details, so we stop and display it
+            lastFlightUpdate = millis();
             return;
         }
     }
@@ -167,10 +169,9 @@ void getNearestFlightInfo() {
 
 void displayFlightInfo(String origin, String dest, String airline, String flight, String aircraftOrStatus) {
 
-  
-    dma_display->fillScreenRGB888(0, 0, 0);
+    dma_display->clearScreen();
 
-    // ==== LINE 1: ORIGIN → DEST ====
+    // ORIGIN → DEST
     dma_display->setTextColor(dma_display->color565(255, 153, 255)); // pink
     dma_display->setTextSize(1);
     dma_display->setCursor(5, 3);
@@ -178,7 +179,7 @@ void displayFlightInfo(String origin, String dest, String airline, String flight
     dma_display->print(" > ");
     dma_display->print(dest);
 
-    // ==== LINE 2: FLIGHT NUMBER ====
+    // FLIGHT NUMBER
     dma_display->setTextColor(dma_display->color565(0, 128, 255)); // blue
     dma_display->setTextSize(1);  
     dma_display->setCursor(5, 13);
@@ -189,7 +190,7 @@ void displayFlightInfo(String origin, String dest, String airline, String flight
     
     dma_display->drawFastHLine(43, 16, 16, dma_display->color565(0, 128, 255));
 
-    // ==== LINE 3: AIRCRAFT or STATUS ====
+    // AIRCRAFT
     dma_display->setTextColor(dma_display->color565(0, 153, 52)); // purple
     dma_display->setTextSize(1);
     dma_display->setCursor(5, 23);
