@@ -8,7 +8,7 @@
 #include "ESP32-HUB75-MatrixPanel-I2S-DMA.h" 
 #include "config.h"
 
-const char* API_URL_FORMAT = "https://api.openweathermap.org/data/3.0/onecall?lat=%.4f&lon=%.4f&exclude=current,minutely,hourly,alerts&appid=%s&units=imperial";
+const char* API_URL_FORMAT = "https://api.openweathermap.org/data/3.0/onecall?lat=%.4f&lon=%.4f&exclude=daily,minutely,hourly,alerts&appid=%s&units=imperial";
 
 extern const uint8_t sun24x24[24][3] PROGMEM;
 extern const uint8_t cloud24x24[24][3] PROGMEM;
@@ -17,7 +17,7 @@ extern const uint8_t snow24x24[24][3] PROGMEM;
 
 // --- Weather Data Structure ---
 struct WeatherData {
-    int temp_high = 0;
+    int temp = 0;
     int temp_low = 0;
     String day_abbr = "---";
     String condition = "Clear"; 
