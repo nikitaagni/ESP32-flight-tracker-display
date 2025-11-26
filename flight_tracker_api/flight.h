@@ -28,7 +28,7 @@ bool fetchFlightAwareData(String callsign);
 // Simple Haversine distance calculation
 float haversine(float lat1, float lon1, float lat2, float lon2);
 
-void displayFlightInfo(String origin, String dest, String airline, String flight, String aircraft);
+void displayFlightInfo(String origin, String dest, String flight, String aircraft);
 
 
 #endif // FLIGHT_H

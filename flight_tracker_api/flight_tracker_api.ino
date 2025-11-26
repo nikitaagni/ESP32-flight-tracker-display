@@ -5,7 +5,8 @@
 #include <ArduinoJson.h>
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 #include <Fonts/FreeSerif9pt7b.h>
-#include "airlines.h"
+#include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/TomThumb.h>
 #include "config.h"
 #include "weather.h"
 #include "flight.h"
@@ -24,7 +25,8 @@ const int   daylightOffset_sec = 3600;
 
 int currentMode = 0;
 unsigned long lastPress = 0;
-const unsigned long debounceMs = 200;
+const unsigned long debounceMs = 1000;
+static unsigned long lastUpdate = 0;
 
 MatrixPanel_I2S_DMA *dma_display = nullptr;
 
@@ -60,9 +62,9 @@ void displayClock() {
 
     // ==== HOURS ====
     dma_display->setTextSize(1);
-    dma_display->setCursor(15, 25);
+    dma_display->setCursor(9, 21);
     dma_display->setTextColor(timeColor);
-    if (hour12 < 10) dma_display->setCursor(10, 15);;
+    if (hour12 < 10) dma_display->setCursor(15, 21);
     dma_display->print(hour12);
 
 //    dma_display->setTextColor(minColor);
@@ -78,17 +80,18 @@ void displayClock() {
 }
 
 void handleButton() {
+  Serial.println(digitalRead(BUTTON_PIN));
   if (digitalRead(BUTTON_PIN) == LOW) {
     unsigned long now = millis();
     if (now - lastPress > debounceMs) {
       currentMode = (currentMode + 1) % 2;
       lastPress = now;
       dma_display->clearScreen();
-      dma_display->setCursor(0, 0);
-      dma_display->setFont(&FreeSerif9pt7b);
+      dma_display->setCursor(0, 15);
+      dma_display->setFont(&FreeSans9pt7b);
       dma_display->setTextSize(1);
       dma_display->setTextColor(dma_display->color565(255, 255, 255));
-      dma_display->print("Getting new data");
+      dma_display->print("loading!");
       dma_display->setFont(NULL);
       Serial.println("Getting new data...");
 
@@ -126,8 +129,11 @@ void setup() {
   Serial.println("\nWiFi connected!");
   
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+  // display clock while weather loading
   displayClock();
   getWeather();
+  dma_display->clearScreen();
   updateDisplay();
   
 }
@@ -145,14 +151,16 @@ void loop() {
     if (millis() - lastWeatherUpdate > WEATHER_UPDATE_INTERVAL) {
       getWeather();
     }
-    delay(3000); 
-    dma_display->clearScreen();
-    updateDisplay();
+    // otherwise update the time every 3 seconds, needed to prevent display flickering
+    if (millis() - lastUpdate > 3000) {
+        lastUpdate = millis();
+        dma_display->clearScreen();
+        updateDisplay();
+    }
   } else if (currentMode == 1) {
+    // Check if it's time to update the flight data
     if (millis() - lastFlightUpdate > FLIGHT_UPDATE_INTERVAL) {
       getNearestFlightInfo();
     }
   }
-
-// displayClock();
 }

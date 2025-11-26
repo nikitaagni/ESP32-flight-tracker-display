@@ -4,7 +4,7 @@
 #include <cmath> // For isnan()
 
 unsigned long lastFlightUpdate = 0;
-const long FLIGHT_UPDATE_INTERVAL = 60 * 1000; // every minute
+const long FLIGHT_UPDATE_INTERVAL = 60 * 1000 * 2; // every two minute
 
 // haversine distance (km) calculation between two points.
 float haversine(float lat1, float lon1, float lat2, float lon2) {
@@ -27,9 +27,27 @@ bool fetchFlightAwareData(String callsign) {
     }
 
     HTTPClient http;
+    
+struct tm timeinfo;
+getLocalTime(&timeinfo);
+
+    char startDay[11];
+    strftime(startDay, sizeof(startDay), "%Y-%m-%d", &timeinfo);
+    
+    // Compute tomorrow
+    timeinfo.tm_mday += 1;
+    mktime(&timeinfo);
+    
+    char endDay[11];
+    strftime(endDay, sizeof(endDay), "%Y-%m-%d", &timeinfo);
 
     // Construct the URL using the base and callsign
     String url = String(aeroBase) + callsign;
+    url += "?ident_type=designator&start=";
+    url += startDay;
+    url += "&end=";
+    url += endDay;
+
 
     Serial.println(url);
     http.begin(url);
@@ -64,26 +82,28 @@ bool fetchFlightAwareData(String callsign) {
     if (first["type"].as<String>() != "Airline") {
         return false;
     }
-    
-    // Extract data fields
+//    
+//    // Extract data fields
     String origin  = first["origin"]["code_iata"].as<String>();    // e.g. "ATL"
     String dest    = first["destination"]["code_iata"].as<String>(); // e.g. "LAX"
-    String airline = first["operator_iata"].as<String>();            // e.g. "DL"
-    String flight  = first["ident_iata"].as<String>();            // e.g. "640"
+    String flight  = first["ident_iata"].as<String>();            // e.g. "DL640"
     String aircraft = first["aircraft_type"].as<String>();          // e.g. "A321"
-
-    // test data
-    //String origin = "ATL";
-    //String dest = "SFO";
-    //String flight = "F91949";
-    //String aircraft = "A321neo";
-
+//    int knots = flight["filed_airspeed"] | 0;
+//    int altitudeHundreds = flight["filed_altitude"] | 0;
+//
+//    // test data
+//    String origin = "ATL";
+//    String dest = "SFO";
+//    int altitudeHundreds = 500;
+//    String flight = "F91949";
+//    int knots = 460.312;
+//
     Serial.println("Found valid flight!");
     Serial.printf("Route: %s -> %s\n", origin.c_str(), dest.c_str());
-
-    // Call the display function
-    displayFlightInfo(origin, dest, airline, flight, aircraft);
-
+//
+//    // Call the display function
+    displayFlightInfo(origin, dest, flight, aircraft);
+//
     return true;
 }
 
@@ -91,6 +111,8 @@ bool fetchFlightAwareData(String callsign) {
  * @brief Fetches state vectors from OpenSky and finds the nearest valid flight.
  */
 void getNearestFlightInfo() {
+
+  
     Serial.print("Fetching OpenSky data...");
     
     HTTPClient http;
@@ -166,13 +188,13 @@ void getNearestFlightInfo() {
     Serial.println("No valid FlightAware data found for any nearby planes.");
 }
 
-
-void displayFlightInfo(String origin, String dest, String airline, String flight, String aircraftOrStatus) {
+void displayFlightInfo(String origin, String dest, String flight, String aircraft) {
 
     dma_display->clearScreen();
 
     // ORIGIN → DEST
     dma_display->setTextColor(dma_display->color565(255, 153, 255)); // pink
+    dma_display->setFont(NULL);
     dma_display->setTextSize(1);
     dma_display->setCursor(5, 3);
     dma_display->print(origin);
@@ -183,18 +205,43 @@ void displayFlightInfo(String origin, String dest, String airline, String flight
     dma_display->setTextColor(dma_display->color565(0, 128, 255)); // blue
     dma_display->setTextSize(1);  
     dma_display->setCursor(5, 13);
-//    const char* name = airline.c_str();
-//    dma_display->print(getAirlineName(name));
-//    dma_display->print(getAirlineName(icao_airline.c_str()));
     dma_display->print(flight);
+
     
     dma_display->drawFastHLine(43, 16, 16, dma_display->color565(0, 128, 255));
 
-    // AIRCRAFT
     dma_display->setTextColor(dma_display->color565(0, 153, 52)); // purple
     dma_display->setTextSize(1);
     dma_display->setCursor(5, 23);
-    dma_display->print(aircraftOrStatus);
+    dma_display->print(aircraft);
+
+
+//    int mph = knots * 1.15078;              // speed in mph
+//    int feet = altHundreds * 100;
+//    int miles = feet / 5280.0;
+//
+//    // AIRCRAFT
+//    dma_display->setTextColor(dma_display->color565(0, 153, 52)); // purple
+//    dma_display->setTextSize(1);
+//    dma_display->setCursor(5, 23);
+//
+//    dma_display->printf("%d", mph);
+//
+//    // Draw "mph" in tiny font right after the number
+//    dma_display->setFont(&TomThumb);
+//    dma_display->setCursor(dma_display->getCursorX(), 30);
+//    dma_display->print("mph");
+//    
+//    // Altitude
+//    dma_display->setFont(NULL); // back to large font
+//    dma_display->setCursor(dma_display->getCursorX() + 5, 23);
+//    dma_display->printf("%d", miles);
+//    
+//    // Draw "m" in tiny font
+//    dma_display->setFont(&TomThumb);
+//    dma_display->setCursor(dma_display->getCursorX(), 30);
+//    dma_display->print("mi");
+//    dma_display->setFont(NULL);
 
     dma_display->flipDMABuffer();
 }
