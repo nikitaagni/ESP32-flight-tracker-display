@@ -23,20 +23,9 @@ struct WeatherData {
     String condition = "Clear"; 
 };
 
-// Global Variable Declarations
-// The definitions (where memory is allocated) are in weather.cpp
 extern WeatherData weatherForecast;
 extern unsigned long lastWeatherUpdate;
 extern const long WEATHER_UPDATE_INTERVAL;
-
-// --- Color Definitions ---
-// These must be defined after dma_display object is declared
-#define COLOR_WHITE dma_display->color565(255, 255, 255)
-#define COLOR_YELLOW dma_display->color565(255, 255, 0)
-#define COLOR_CYAN dma_display->color565(0, 255, 255)
-#define COLOR_BLUE dma_display->color565(0, 0, 255)
-#define COLOR_GREEN dma_display->color565(0, 255, 0)
-#define COLOR_BLACK dma_display->color565(0, 0, 0)
 
 String getDayAbbr(time_t epoch_time);
 void getWeather();

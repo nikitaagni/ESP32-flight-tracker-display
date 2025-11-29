@@ -129,11 +129,11 @@ void getWeather() {
   Serial.print("Fetching weather data...");
 
   char url[300];
-  // Use the #define variables here: LAT, LON, and WEATHERAPIKEY
+
   snprintf(url, sizeof(url), API_URL_FORMAT, (double)LAT, (double)LON, WEATHERAPIKEY);
 
   HTTPClient http;
-  // Note: The OpenWeatherMap API uses HTTPS, which is handled automatically by ESP32 HTTPClient.
+
   http.begin(url);
 
   Serial.print(url);
@@ -141,13 +141,9 @@ void getWeather() {
 
   if (httpCode > 0) {
     String payload = http.getString();
-    // Use a small buffer size (512) as we only need two days of forecast
+
     StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, payload);
-
-    // --- ADDED: Serial Print of Raw Payload ---
-    Serial.println("Success! Raw JSON Payload:");
-    Serial.println(payload);
 
     if (error) {
       Serial.print("deserializeJson() failed: ");
@@ -158,7 +154,6 @@ void getWeather() {
 
     // --- Extract Data ---
     weatherForecast.temp = doc["current"]["temp"].as<int>();
-    //        weatherForecast.temp_low = doc["current"][0]["temp"]["min"].as<int>();
     weatherForecast.condition = doc["current"]["weather"][0]["main"].as<String>();
     time_t dt0 = doc["current"]["dt"].as<time_t>();
     weatherForecast.day_abbr = getDayAbbr(dt0);
@@ -166,10 +161,8 @@ void getWeather() {
     Serial.println("Data:");
     Serial.print("  Day Abbreviation: ");
     Serial.println(weatherForecast.day_abbr);
-    Serial.print("  High Temperature: ");
+    Serial.print("  Current Temperature: ");
     Serial.println(weatherForecast.temp);
-    //        Serial.print("  Low Temperature: ");
-    //        Serial.println(weatherForecast.temp_low);
     Serial.print("  Condition: ");
     Serial.println(weatherForecast.condition);
 
@@ -184,6 +177,56 @@ void getWeather() {
   lastWeatherUpdate = millis();
 }
 
+// // Renders the display content (Clock, Weather Icon, Temps).
+// void updateDisplay() {
+//   struct tm timeinfo;
+//   if (!getLocalTime(&timeinfo)) {
+//     Serial.println("Failed to obtain time");
+//     return;
+//   }
+
+//   const int DEGREE_CHAR = 248;
+
+//   // --- LEFT HALF: WEATHER ICON---
+//   pickCondition(weatherForecast.condition);
+
+//   dma_display->setTextSize(1);
+//   dma_display->setTextColor(dma_display->color565(44, 156, 226));
+
+//   // Positioned at the bottom left
+//   dma_display->setCursor(43, 13);
+//   dma_display->print(weatherForecast.day_abbr);
+
+
+//   const int tempX = 29;
+
+//   // --- ROW 1: Temp (Right Side) ---
+//   dma_display->setCursor(47, 3);
+//   dma_display->printf("%d", weatherForecast.temp);
+//   dma_display->setCursor(57, 1);
+//   dma_display->printf("%c", DEGREE_CHAR);
+
+//   // X position
+//   const int TIME_X_START = 50;
+//   bool isPM = timeinfo.tm_hour >= 12;        // true if PM
+
+//   int hour_12 = timeinfo.tm_hour % 12;
+//   if (hour_12 == 0) hour_12 = 12; // Handle 0:00 as 12:00
+
+//   dma_display->setCursor(26 , 23);
+//   if (hour_12 > 9) dma_display->setCursor(20, 23);
+//   dma_display->printf("%d:%02d", hour_12, timeinfo.tm_min);
+
+//   if (isPM) {
+//     dma_display->printf("PM");
+//   } else {
+//     dma_display->printf("AM");
+//   }
+//   dma_display->setFont(NULL);
+
+//   dma_display->flipDMABuffer();
+// }
+
 // Renders the display content (Clock, Weather Icon, Temps).
 void updateDisplay() {
   struct tm timeinfo;
@@ -194,55 +237,64 @@ void updateDisplay() {
 
   const int DEGREE_CHAR = 248;
 
-  // --- LEFT HALF: WEATHER ICON---
-  //    pickCondition(weatherForecast.condition);
-  pickCondition("Rain");
+  // --- Color Definitions for Soft Gradient ---
+  // R G B values (0-255) converted to 16-bit 5-6-5 format
 
+  // 1. Light Red/Coral (Day of Week)
+  uint16_t color_time = dma_display->color565(250, 128, 114);
+
+  // 2. Vibrant Yellow (Temperature)
+  uint16_t color_temp = dma_display->color565(255, 220, 0);
+
+  // 3. Soft Orange (Time)
+  uint16_t color_day = dma_display->color565(255, 165, 0);
+
+
+  
+  
+  // --- LEFT HALF: WEATHER ICON---
+  pickCondition(weatherForecast.condition);
+  
+  // --- DAY OF WEEK (Light Red/Coral) ---
   dma_display->setTextSize(1);
-  dma_display->setTextColor(dma_display->color565(44, 156, 226));
+  dma_display->setTextColor(color_day); // Apply Light Red/Coral color
 
   // Positioned at the bottom left
   dma_display->setCursor(43, 13);
   dma_display->print(weatherForecast.day_abbr);
 
-
   const int tempX = 29;
 
-  // --- ROW 1: Temp (Right Side) ---
+  // --- ROW 1: Temp (Vibrant Yellow) ---
+  dma_display->setTextColor(color_temp); // Apply Vibrant Yellow color
+  
   dma_display->setCursor(47, 3);
   dma_display->printf("%d", weatherForecast.temp);
   dma_display->setCursor(57, 1);
-  dma_display->printf("%c", DEGREE_CHAR);
-
-  // --- ROW 2: Low Temp (Right Side) ---
-  //    dma_display->setCursor(tempX, 23);
-  //    dma_display->printf("%d", weatherForecast.temp_low);
-  //    dma_display->setCursor(tempX+10, 20);
-  //    dma_display->printf("%c", DEGREE_CHAR);
-  //    dma_display->drawFastVLine(46, 3, 26, COLOR_WHITE);
-
-  // X position
+  dma_display->printf("%c", DEGREE_CHAR); // Degree symbol is also Vibrant Yellow
+  
+  // --- TIME (Soft Orange) ---
   const int TIME_X_START = 50;
-  //    dma_display->setFont(&FreeSans9pt7b);
-  // HOUR: e.g., "8:" (using 12-hour format)
   bool isPM = timeinfo.tm_hour >= 12;        // true if PM
 
   int hour_12 = timeinfo.tm_hour % 12;
   if (hour_12 == 0) hour_12 = 12; // Handle 0:00 as 12:00
 
+  dma_display->setTextColor(color_time); // Apply Soft Orange color
+
+  // Handle positioning for single-digit hours
   dma_display->setCursor(26 , 23);
   if (hour_12 > 9) dma_display->setCursor(20, 23);
+  
   dma_display->printf("%d:%02d", hour_12, timeinfo.tm_min);
 
-  // MINUTES: e.g., "50" (placed on the next line)
-  //    dma_display->setCursor(TIME_X_START, 18);
-  //    dma_display->printf("", timeinfo.tm_min); // %02d ensures leading zero
-
+  // AM/PM is also Soft Orange
   if (isPM) {
     dma_display->printf("PM");
   } else {
     dma_display->printf("AM");
   }
+  
   dma_display->setFont(NULL);
 
   dma_display->flipDMABuffer();
@@ -267,12 +319,12 @@ void pickCondition(const String& condition) {
       condition == "Drizzle" ||
       condition == "Rain")
   {
-    drawIcon(1, 1, rain24x24, dma_display->color565(0, 120, 255));
+    drawIcon(2, 2, rain24x24, dma_display->color565(0, 120, 255));
     return;
   }
 
   if (condition == "Snow") {
-    drawIcon(1, 1, snow24x24, dma_display->color565(180, 240, 255));
+    drawIcon(2, 2, snow24x24, dma_display->color565(180, 240, 255));
     return;
   }
 
@@ -289,7 +341,7 @@ void pickCondition(const String& condition) {
       condition == "Tornado" ||
       condition == "Clouds")
   {
-    drawIcon(1, 1, cloud24x24, dma_display->color565(255, 255, 255));
+    drawIcon(2, 2, cloud24x24, dma_display->color565(255, 255, 255));
     drawIcon(7, 4, cloud24x24, dma_display->color565(64, 64, 64));
     return;
   }

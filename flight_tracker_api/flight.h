@@ -18,7 +18,6 @@ struct Flight {
     float distance;
 };
 
-
 // Main function to fetch flight data
 void getNearestFlightInfo();
 
@@ -29,6 +28,9 @@ bool fetchFlightAwareData(String callsign);
 float haversine(float lat1, float lon1, float lat2, float lon2);
 
 void displayFlightInfo(String origin, String dest, String flight, String aircraft);
+
+void drawPlane();
+void planeAnimationTask(void *parameter);
 
 
 #endif // FLIGHT_H
