@@ -96,6 +96,9 @@ void handleButton() {
         buttonClicked = true;
         planeX = -12;  // reset animation
       }
+      if (currentMode == 0) {
+        buttonClicked = false;
+      }
     }
   }
 }
